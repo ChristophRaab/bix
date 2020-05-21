@@ -84,7 +84,7 @@ class GSMO:
 
 
             S.append(j_best)
-            self.x[S] += self.step_size * dx_best_S_best
+            self.x[S] += dx_best_S_best
             """
             a = (self.A + self.A.T + np.diag(self.b))[:, S]
             df = (self.A + self.A.T + np.diag(self.b))[:, S].dot(dx_best_S_best)

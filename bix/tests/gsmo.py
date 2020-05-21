@@ -114,8 +114,8 @@ class TESTGSMO(unittest.TestCase):
         b = -b
         prob = cp.Problem(cp.Minimize((1 / 2) * cp.quad_form(x, A) - b.T @ x),
                           [G @ x <= h, C @ x == d])
-        prob.solve(cp.MOSEK)
-        print("\n#### CVXPY x Mosek ####")
+        prob.solve()
+        print("\n#### CVXPY ####")
         print(x.value)
 
         print("\n#### SVC ####")
@@ -151,8 +151,8 @@ class TESTGSMO(unittest.TestCase):
             cond_idx += 2
         prob = cp.Problem(cp.Minimize(cp.quad_form(x, A) + b.T @ x),
                           [G @ x <= h])
-        prob.solve(cp.MOSEK)
-        print("\n#### CVXPY x Mosek ####")
+        prob.solve()
+        print("\n#### CVXPY ####")
         print(x.value)
 
         # Act
@@ -161,7 +161,7 @@ class TESTGSMO(unittest.TestCase):
         print(gsmo_solver.x.round(3))
 
         # Assert
-        np.testing.assert_almost_equal(gsmo_solver.x, x.value,1e-04)
+        np.testing.assert_almost_equal(gsmo_solver.x, x.value, 5)
 
 
 if __name__ == '__main__':
