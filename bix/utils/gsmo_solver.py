@@ -1,7 +1,7 @@
+import cvxpy as cp
 import numpy as np
 from scipy.linalg import null_space
 from scipy.optimize import lsq_linear
-import cvxpy as cp
 
 
 class GSMO:

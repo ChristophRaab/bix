@@ -1,12 +1,13 @@
+import os
 import unittest
+
+import cvxpy as cp
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import os
-import matplotlib.pyplot as plt
-import cvxpy as cp
 from sklearn.svm import SVC
+
 from bix.utils.gsmo_solver import GSMO
-import quadprog
 
 
 class TESTGSMO(unittest.TestCase):
