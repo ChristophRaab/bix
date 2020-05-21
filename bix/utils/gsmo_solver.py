@@ -85,10 +85,13 @@ class GSMO:
 
             S.append(j_best)
             self.x[S] += self.step_size * dx_best_S_best
-            self.gradient = (self.A + self.A.T).dot(self.x) + self.b
+            """
             a = (self.A + self.A.T + np.diag(self.b))[:, S]
             df = (self.A + self.A.T + np.diag(self.b))[:, S].dot(dx_best_S_best)
-           # self.gradient += self.step_size * (self.A + self.A.T + np.diag(self.b))[:, S].dot(dx_best_S_best)
+            test = self.gradient[S] + df
+            self.gradient = (self.A + self.A.T).dot(self.x) + self.b
+            """
+            self.gradient += 2*(self.A + self.A.T + np.diag(self.b))[:, S].dot(dx_best_S_best)
 
             if dF_best < self.epsilon:
                 print("Delta F < EPSILON")
