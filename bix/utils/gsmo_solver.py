@@ -74,12 +74,21 @@ class GSMO:
                     dx_best_S_best = dx_S_best
                 S.remove(j)
 
-            if j_best == -1:
+            if j_best == -1 and not np.allclose(self.gradient,0):
                 raise RuntimeError("cant find second best choice to optimise")
+
+            if j_best == -1:
+                print("Gradient is 0 and no better dx")
+                print(f'after iterations: {t + 1}')
+                return self.x
+
 
             S.append(j_best)
             self.x[S] += self.step_size * dx_best_S_best
-            self.gradient += self.step_size * (self.A + self.A.transpose() + np.diag(self.b))[:, S].dot(dx_best_S_best)
+            self.gradient = (self.A + self.A.T).dot(self.x) + self.b
+            a = (self.A + self.A.T + np.diag(self.b))[:, S]
+            df = (self.A + self.A.T + np.diag(self.b))[:, S].dot(dx_best_S_best)
+           # self.gradient += self.step_size * (self.A + self.A.T + np.diag(self.b))[:, S].dot(dx_best_S_best)
 
             if dF_best < self.epsilon:
                 print("Delta F < EPSILON")
@@ -107,7 +116,9 @@ class GSMO:
         if len(active_set) > self.K - 1:
             # p random indices only when K > 10
             p_upper_bound = round(len(active_set) * 0.1)
-            p = np.random.choice([i for i in range(p_upper_bound + 1)], 1)[0]
+            p = 0
+            if np.random.rand(1)[0] > 0.9:
+                p = p_upper_bound
 
             sorted_v = np.sort(gradient_displaced, order='val')
             for i in range(self.K - p - 1):
@@ -216,7 +227,7 @@ class GSMO:
         q = self.gradient[S_d]
         x = cp.Variable(D)
         prob = cp.Problem(cp.Minimize(cp.quad_form(x, P) + q.T @ x),
-                         [G @ x <= h])
+                          [G @ x <= h])
         prob.solve()
 
         return x.value

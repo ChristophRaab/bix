@@ -96,8 +96,8 @@ class TESTGSMO(unittest.TestCase):
 
         # Act
         print("#### SMO  ####")
-        # gsmo_solver.solve()
-        # print(gsmo_solver.x.round(3))
+        gsmo_solver.solve()
+        print(gsmo_solver.x.round(3))
 
         G = np.zeros((2 * A.shape[0], A.shape[0]))
         h = np.zeros((2 * A.shape[0]))
@@ -136,10 +136,24 @@ class TESTGSMO(unittest.TestCase):
         # Arrange
         A = np.array([[1, 0], [0, 1]], dtype=float)
         b = np.array([1, -1], dtype=float).reshape((2,))
-        gsmo_solver = GSMO(A=A, b=b, bounds=(-1, 1), step_size=0.01)
-        solution_quadprog = quadprog.solve_qp(A, b)
-        print("\n#### Quadprog ####")
-        print(solution_quadprog[0])
+        gsmo_solver = GSMO(A=A, b=b, bounds=(0, 1), step_size=1)
+
+        x = cp.Variable(A.shape[0])
+        G = np.zeros((2 * A.shape[0], A.shape[0]))
+        h = np.zeros((2 * A.shape[0]))
+        cond_idx = 0
+        for i in range(A.shape[0]):
+            lb, ub = (0, 1)
+            G[cond_idx, i] = 1
+            h[cond_idx] = ub
+            G[cond_idx + 1, i] = -1
+            h[cond_idx + 1] = -lb
+            cond_idx += 2
+        prob = cp.Problem(cp.Minimize(cp.quad_form(x, A) + b.T @ x),
+                          [G @ x <= h])
+        prob.solve(cp.MOSEK)
+        print("\n#### CVXPY x Mosek ####")
+        print(x.value)
 
         # Act
         print("#### SMO  ####")
@@ -147,7 +161,7 @@ class TESTGSMO(unittest.TestCase):
         print(gsmo_solver.x.round(3))
 
         # Assert
-        np.testing.assert_almost_equal(gsmo_solver.x, solution_quadprog)
+        np.testing.assert_almost_equal(gsmo_solver.x, x.value,1e-04)
 
 
 if __name__ == '__main__':
