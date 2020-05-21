@@ -3,9 +3,10 @@ import numpy as np
 import pandas as pd
 import os
 import matplotlib.pyplot as plt
-from scipy.optimize import minimize
+import cvxpy as cp
 from sklearn.svm import SVC
 from bix.utils.gsmo_solver import GSMO
+import quadprog
 
 
 class TESTGSMO(unittest.TestCase):
@@ -76,7 +77,7 @@ class TESTGSMO(unittest.TestCase):
         test_data_file = os.path.join(pwd, "small_svm_problem_data.csv")
         data = pd.read_csv(test_data_file, delimiter=',')
         print(data)
-        A = np.zeros((data.shape[0], data.shape[0]))
+        A = np.zeros((data.shape[0], data.shape[0]), dtype=float)
         points = data[['X', 'Y']]
         y = data['Label']
         for i in range(A.shape[0]):
@@ -84,27 +85,38 @@ class TESTGSMO(unittest.TestCase):
                 A[i, j] = y.iloc[i] * y.iloc[j] * points.iloc[i].dot(points.iloc[j])
 
         A = (0.5) * A
-        b = -np.ones((A.shape[0],))
-        C = y.to_numpy()
+        b = -np.ones((A.shape[0],), dtype=float)
+        C = y.to_numpy().astype(dtype=float)
         C_t = C.reshape((1, C.shape[0]))
-        d = 0
-        gsmo_solver = GSMO(A, b, C_t, d, bounds=(0, 10), step_size=0.1)
-
-        fun = lambda x, H, f: x.transpose().dot(H).dot(x) + f.transpose().dot(x)
-        bnds = tuple([(0, 1) for i in range(A.shape[0])])
-        constr = ({'type': 'eq', 'args': C_t, 'fun': lambda x, c: c.transpose().dot(x)})
-        res = minimize(fun, np.ones((A.shape[0],)), args=(A, b), bounds=bnds, constraints=constr)
+        d = np.zeros((1,), dtype=float)
+        gsmo_solver = GSMO(A, b, C_t, d, bounds=(0, 1), step_size=0.1)
 
         clf = SVC(C=1, kernel='linear')
         clf.fit(points, y)
 
         # Act
         print("#### SMO  ####")
-        gsmo_solver.solve()
-        print(gsmo_solver.x.round(3))
+        # gsmo_solver.solve()
+        # print(gsmo_solver.x.round(3))
 
-        print("\n#### MINIMIZE ####")
-        print(res.x)
+        G = np.zeros((2 * A.shape[0], A.shape[0]))
+        h = np.zeros((2 * A.shape[0]))
+        cond_idx = 0
+        for i in range(A.shape[0]):
+            lb, ub = (0, 1)
+            G[cond_idx, i] = 1
+            h[cond_idx] = ub
+            G[cond_idx + 1, i] = -1
+            h[cond_idx + 1] = -lb
+            cond_idx += 2
+
+        x = cp.Variable(A.shape[0])
+        b = -b
+        prob = cp.Problem(cp.Minimize((1 / 2) * cp.quad_form(x, A) - b.T @ x),
+                          [G @ x <= h, C @ x == d])
+        prob.solve(cp.MOSEK)
+        print("\n#### CVXPY x Mosek ####")
+        print(x.value)
 
         print("\n#### SVC ####")
         print(clf.dual_coef_)
@@ -118,18 +130,16 @@ class TESTGSMO(unittest.TestCase):
         # Cx = d
         result = C.dot(gsmo_solver.x)
         np.testing.assert_almost_equal(d, result)
-        np.testing.assert_almost_equal(gsmo_solver.x, res.x)
+        # np.testing.assert_almost_equal(gsmo_solver.x, res.x)
 
     def test_small_qp_without_constraints(self):
         # Arrange
-        A = np.array([[1, 0], [0, 1]])
-        b = np.array([1, -1]).reshape((2,))
-        gsmo_solver = GSMO(A=A, b=b, bounds=(None, None), step_size=0.01)
-        fun = lambda x, H, f: x.transpose().dot(H).dot(x) + f.transpose().dot(x)
-        # bnds = tuple([(0, 1) for i in range(A.shape[0])])
-        res = minimize(fun, np.ones((A.shape[0],)), args=(A, b))
-        print("\n#### MINIMIZE ####")
-        print(res.x)
+        A = np.array([[1, 0], [0, 1]], dtype=float)
+        b = np.array([1, -1], dtype=float).reshape((2,))
+        gsmo_solver = GSMO(A=A, b=b, bounds=(-1, 1), step_size=0.01)
+        solution_quadprog = quadprog.solve_qp(A, b)
+        print("\n#### Quadprog ####")
+        print(solution_quadprog[0])
 
         # Act
         print("#### SMO  ####")
@@ -137,7 +147,8 @@ class TESTGSMO(unittest.TestCase):
         print(gsmo_solver.x.round(3))
 
         # Assert
-        np.testing.assert_almost_equal(gsmo_solver.x, res.x)
+        np.testing.assert_almost_equal(gsmo_solver.x, solution_quadprog)
+
 
 if __name__ == '__main__':
     unittest.main()

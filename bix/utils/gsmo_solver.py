@@ -1,11 +1,11 @@
 import numpy as np
 from scipy.linalg import null_space
-from scipy.optimize import lsq_linear, minimize
-from qpsolvers import solve_qp
+from scipy.optimize import lsq_linear
+import cvxpy as cp
 
 
 class GSMO:
-    def __init__(self, A, b, C=None, d=0, bounds=(None, None), optimization_type='minimize', max_iter=1000,
+    def __init__(self, A, b, C=None, d=0, bounds=(None, None), optimization_type='minimize', max_iter=10000,
                  epsilon=0.0001,
                  step_size=1):
         # optimize F: x'Ax + b'x  s.t.  Cx=d, x elements [r,R]^n
@@ -144,7 +144,7 @@ class GSMO:
                 return self.R
 
     def __solve_small_QP(self, S):
-        if self.K == 1:
+        """if self.K == 1:
             k = S[0]
             alpha_min = self.r - self.x[k]
             alpha_max = self.R - self.x[k]
@@ -165,14 +165,17 @@ class GSMO:
                 alpha_l = self.solve_special_case(alpha_min, alpha_max, beta, gamma, l)
                 alpha_k = - (alpha_l * c_l) / c_k
                 return np.array([alpha_k, alpha_l]).reshape((2,))
-        else:
-            u_k = null_space(self.C[:, S])
-            alpha_k = self.__find_optimal_solution(S, np.linalg.matrix_rank(self.C) - np.linalg.matrix_rank(
-                self.C[:, S]) + 1)
-            dx_s = np.zeros((u_k.shape[0], 1))
-            for idx, a in np.ndenumerate(alpha_k):
-                dx_s += a * u_k[:, idx]
-            return dx_s.reshape((dx_s.shape[0],))
+        else:"""
+        u_k = null_space(self.C[:, S])
+        alpha_k = self.__find_optimal_solution(S, np.linalg.matrix_rank(self.C) - np.linalg.matrix_rank(
+            self.C[:, S]) + 1)
+        if alpha_k is None:
+            raise RuntimeError("Small QP was not solvable")
+
+        dx_s = np.zeros((u_k.shape[0], 1))
+        for idx, a in np.ndenumerate(alpha_k):
+            dx_s += a * u_k[:, idx]
+        return dx_s.reshape((dx_s.shape[0],))
 
     def solve_special_case(self, alpha_min, alpha_max, beta, gamma, k):
         # alpha = -(gamma)/2*beta if -(gamma)/2*beta in bounds amin,amax and beta < 0 (maximization) > 0 (minimization)
@@ -194,32 +197,29 @@ class GSMO:
                 return alpha_max
 
     def __find_optimal_solution(self, S, D):
-        lo_bounds = []
-        up_bounds = []
         bounds = []
+        G = np.zeros((2 * D, D))
+        h = np.zeros((2 * D))
+        cond_idx = 0
         for i in range(D):
             lb, ub = self.__get_bounds(self.x[i])
-            lo_bounds.append(lb)
-            up_bounds.append(ub)
+            G[cond_idx, i] = 1
+            h[cond_idx] = ub
+            G[cond_idx + 1, i] = -1
+            h[cond_idx + 1] = -lb
+            cond_idx += 2
             bounds.append((lb, ub))
-        bounds = tuple(bounds)
 
         S_d = S[:D]
 
         P = self.A[:, S_d].transpose()[:, S_d].transpose()
         q = self.gradient[S_d]
-        G = np.zeros((D,))
-        A = np.zeros((D,))
-        h = np.zeros((D,))
-        b = np.zeros((D,))
-        solution_quadprog = solve_qp(P=P, q=q,
-                                     G=G, A=A, h=h, b=b,
-                                     lb=np.array(lo_bounds),
-                                     ub=np.array(up_bounds))
+        x = cp.Variable(D)
+        prob = cp.Problem(cp.Minimize(cp.quad_form(x, P) + q.T @ x),
+                         [G @ x <= h])
+        prob.solve()
 
-        solution_minimize = minimize(fun=objective_function, x0=np.array([1] * D), args=(D, S, self.A, self.gradient),
-                                     bounds=bounds)
-        return solution_quadprog
+        return x.value
 
     def __get_bounds(self, x_i):
         a_min = self.r - x_i
