@@ -98,7 +98,7 @@ class TESTGSMO(unittest.TestCase):
         # Act
         print("#### SMO  ####")
         gsmo_solver.solve()
-        print(gsmo_solver.x.round(3))
+        print(gsmo_solver.x)
 
         G = np.zeros((2 * A.shape[0], A.shape[0]))
         h = np.zeros((2 * A.shape[0]))
@@ -159,7 +159,40 @@ class TESTGSMO(unittest.TestCase):
         # Act
         print("#### SMO  ####")
         gsmo_solver.solve()
-        print(gsmo_solver.x.round(3))
+        print(gsmo_solver.x)
+
+        # Assert
+        np.testing.assert_almost_equal(gsmo_solver.x, x.value, 5)
+
+    def test_small_qp_with_constraints(self):
+        # Arrange
+        A = np.array([[1, 0], [0, 1]], dtype=float)
+        b = np.array([1, -1], dtype=float).reshape((2,))
+        C = np.array([[0, 1]],dtype=float)
+        d = np.array([-0.25])
+        gsmo_solver = GSMO(A=A, b=b, C=C, d=d, bounds=(-0.25, 1), step_size=0.01)
+
+        x = cp.Variable(A.shape[0])
+        G = np.zeros((2 * A.shape[0], A.shape[0]))
+        h = np.zeros((2 * A.shape[0]))
+        cond_idx = 0
+        for i in range(A.shape[0]):
+            lb, ub = (-0.25, 1)
+            G[cond_idx, i] = 1
+            h[cond_idx] = ub
+            G[cond_idx + 1, i] = -1
+            h[cond_idx + 1] = -lb
+            cond_idx += 2
+        prob = cp.Problem(cp.Minimize(cp.quad_form(x, A) + b.T @ x),
+                          [G @ x <= h, C @ x == d])
+        prob.solve()
+        print("\n#### CVXPY ####")
+        print(x.value)
+
+        # Act
+        print("#### SMO  ####")
+        gsmo_solver.solve()
+        print(gsmo_solver.x)
 
         # Assert
         np.testing.assert_almost_equal(gsmo_solver.x, x.value, 5)

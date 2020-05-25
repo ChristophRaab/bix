@@ -31,8 +31,8 @@ class GSMO:
             test_res = C.dot(self.x)
             if not np.allclose(d, test_res):
                 raise ValueError(
-                    "The Equation Cx=d was not solvable. expected " + np.array_str(d) + " , got " + np.array_str(
-                        test_res))
+                    "The Equation Cx=d was not solvable. expected " + np.array_str(d) + " , got " + (np.array_str(
+                        test_res) if isinstance(test_res, (np.ndarray)) else str(test_res)))
             # bounds?
         else:
             self.C = np.zeros((1, self.n), dtype=float)
@@ -74,7 +74,7 @@ class GSMO:
                     dx_best_S_best = dx_S_best
                 S.remove(j)
 
-            if j_best == -1 and not np.allclose(self.gradient,0):
+            if j_best == -1 and not np.allclose(self.gradient, 0):
                 raise RuntimeError("cant find second best choice to optimise")
 
             if j_best == -1:
@@ -82,16 +82,15 @@ class GSMO:
                 print(f'after iterations: {t + 1}')
                 return self.x
 
-
             S.append(j_best)
-            self.x[S] += dx_best_S_best
+            self.x[S] += self.step_size*dx_best_S_best
             """
             a = (self.A + self.A.T + np.diag(self.b))[:, S]
             df = (self.A + self.A.T + np.diag(self.b))[:, S].dot(dx_best_S_best)
             test = self.gradient[S] + df
             self.gradient = (self.A + self.A.T).dot(self.x) + self.b
             """
-            self.gradient += 2*(self.A + self.A.T + np.diag(self.b))[:, S].dot(dx_best_S_best)
+            self.gradient +=self.step_size* 2 * (self.A + self.A.T + np.diag(self.b))[:, S].dot(dx_best_S_best)
 
             if dF_best < self.epsilon:
                 print("Delta F < EPSILON")
@@ -216,7 +215,7 @@ class GSMO:
         h = np.zeros((2 * D))
         cond_idx = 0
         for i in range(D):
-            lb, ub = self.__get_bounds(self.x[i])
+            lb, ub = self.__get_bounds(self.x[S[i]], S, i)
             G[cond_idx, i] = 1
             h[cond_idx] = ub
             G[cond_idx + 1, i] = -1
@@ -235,10 +234,25 @@ class GSMO:
 
         return x.value
 
-    def __get_bounds(self, x_i):
-        a_min = self.r - x_i
-        a_max = self.R - x_i
-        return a_min, a_max
+    def __get_bounds(self, x_i, S, i):
+        alpha_min = 0
+        alpha_max = 0
+        if len(S) == 1:
+            alpha_min = self.r - x_i
+            alpha_max = self.R - x_i
+        elif len(S) == 2:
+            l = S[i]
+            k = S[0]
+            if i == 0:
+                k = S[1]
+            c_k = self.C[:, k][0]
+            c_l = self.C[:, l][0]
+            if (not c_k == 0) and (not c_l == 0):
+                w, W = (self.r, self.R) if c_k * c_l > 0 else (self.R, self.r)
+                alpha_min = max(self.r - self.x[l], ((self.x[k] - W) * c_k) / c_l)
+                alpha_max = min(self.R - self.x[l], ((self.x[k] - w) * c_k) / c_l)
+
+        return alpha_min, alpha_max
 
 
 def objective_function(a, D, S, A, grad):
