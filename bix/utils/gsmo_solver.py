@@ -250,21 +250,3 @@ class GSMO:
                 alpha_max = min(self.R - self.x[l], ((self.x[k] - w) * c_k) / c_l)
 
         return alpha_min, alpha_max
-
-
-def objective_function(a, D, S, A, grad):
-    sum1 = 0
-    for k in range(D):
-        sum1 += (a[k] * a[k]) * A[S[k], S[k]]
-
-    sum2 = 0
-    for k in range(D):
-        for i in range(D):
-            if not i == k:
-                sum2 += (a[k] * a[i]) * A[S[i], S[k]]
-
-    sum3 = 0
-    for k in range(D):
-        sum3 += a[k] * grad[S[k]]
-
-    return sum1 + sum2 + sum3
