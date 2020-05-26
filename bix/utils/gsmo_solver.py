@@ -74,23 +74,14 @@ class GSMO:
                     dx_best_S_best = dx_S_best
                 S.remove(j)
 
-            if j_best == -1 and not np.allclose(self.gradient, 0):
-                raise RuntimeError("cant find second best choice to optimise")
-
             if j_best == -1:
-                print("Gradient is 0 and no better dx")
+                print("no step in solution space is better")
                 print(f'after iterations: {t + 1}')
                 return self.x
 
             S.append(j_best)
-            self.x[S] += self.step_size*dx_best_S_best
-            """
-            a = (self.A + self.A.T + np.diag(self.b))[:, S]
-            df = (self.A + self.A.T + np.diag(self.b))[:, S].dot(dx_best_S_best)
-            test = self.gradient[S] + df
-            self.gradient = (self.A + self.A.T).dot(self.x) + self.b
-            """
-            self.gradient +=self.step_size* 2 * (self.A + self.A.T + np.diag(self.b))[:, S].dot(dx_best_S_best)
+            self.x[S] += self.step_size * dx_best_S_best
+            self.gradient += self.step_size * 2 * (self.A + self.A.T + np.diag(self.b))[:, S].dot(dx_best_S_best)
 
             if dF_best < self.epsilon:
                 print("Delta F < EPSILON")
@@ -157,14 +148,15 @@ class GSMO:
                 return self.R
 
     def __solve_small_QP(self, S):
-        """if self.K == 1:
+        if self.K == 1:
             k = S[0]
             alpha_min = self.r - self.x[k]
             alpha_max = self.R - self.x[k]
             beta = self.A[k, k]
             gamma = self.gradient[k]
-            return self.solve_special_case(alpha_min, alpha_max, beta, gamma, k)
-        elif self.K == 2:
+            return np.array([self.solve_special_case(alpha_min, alpha_max, beta, gamma, k)], dtype=float)
+
+        if self.K == 2:
             l = S[1]
             k = S[0]
             c_k = self.C[:, k][0]
@@ -178,7 +170,12 @@ class GSMO:
                 alpha_l = self.solve_special_case(alpha_min, alpha_max, beta, gamma, l)
                 alpha_k = - (alpha_l * c_l) / c_k
                 return np.array([alpha_k, alpha_l]).reshape((2,))
-        else:"""
+            elif c_k == 0 and not c_l == 0:
+                pass
+            elif c_l == 0 and not c_k == 0:
+                pass
+            else:
+                pass
         u_k = null_space(self.C[:, S])
         alpha_k = self.__find_optimal_solution(S, np.linalg.matrix_rank(self.C) - np.linalg.matrix_rank(
             self.C[:, S]) + 1)
@@ -193,7 +190,7 @@ class GSMO:
     def solve_special_case(self, alpha_min, alpha_max, beta, gamma, k):
         # alpha = -(gamma)/2*beta if -(gamma)/2*beta in bounds amin,amax and beta < 0 (maximization) > 0 (minimization)
 
-        alpha = - gamma / 2 * beta
+        alpha = - gamma / (2 * beta)
         if alpha_min <= alpha <= alpha_max and ((self.optimization_type == 'maximize' and beta < 0) or (
                 self.optimization_type == 'minimize' and beta > 0)):
             return alpha

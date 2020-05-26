@@ -90,7 +90,7 @@ class TESTGSMO(unittest.TestCase):
         C = y.to_numpy().astype(dtype=float)
         C_t = C.reshape((1, C.shape[0]))
         d = np.zeros((1,), dtype=float)
-        gsmo_solver = GSMO(A, b, C_t, d, bounds=(0, 1), step_size=0.1)
+        gsmo_solver = GSMO(A, b, C_t, d, bounds=(0, 1), step_size=0.001)
 
         clf = SVC(C=1, kernel='linear')
         clf.fit(points, y)
@@ -168,9 +168,9 @@ class TESTGSMO(unittest.TestCase):
         # Arrange
         A = np.array([[1, 0], [0, 1]], dtype=float)
         b = np.array([1, -1], dtype=float).reshape((2,))
-        C = np.array([[0, 1]],dtype=float)
+        C = np.array([[1, 1]],dtype=float)
         d = np.array([-0.25])
-        gsmo_solver = GSMO(A=A, b=b, C=C, d=d, bounds=(-0.25, 1), step_size=0.01)
+        gsmo_solver = GSMO(A=A, b=b, C=C, d=d, bounds=(-0.25, 1), step_size=1)
 
         x = cp.Variable(A.shape[0])
         G = np.zeros((2 * A.shape[0], A.shape[0]))
@@ -195,7 +195,7 @@ class TESTGSMO(unittest.TestCase):
         print(gsmo_solver.x)
 
         # Assert
-        np.testing.assert_almost_equal(gsmo_solver.x, x.value, 5)
+        np.testing.assert_almost_equal(gsmo_solver.x, x.value, 3)
 
 
 if __name__ == '__main__':
