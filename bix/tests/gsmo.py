@@ -90,7 +90,9 @@ class TESTGSMO(unittest.TestCase):
         C = y.to_numpy().astype(dtype=float)
         C_t = C.reshape((1, C.shape[0]))
         d = np.zeros((1,), dtype=float)
-        gsmo_solver = GSMO(A, b, C_t, d, bounds=(0, 1), step_size=0.001)
+        lb = 0
+        ub = 1
+        gsmo_solver = GSMO(A, b, C_t, d, bounds=(lb, ub), step_size=0.001)
 
         clf = SVC(C=1, kernel='linear')
         clf.fit(points, y)
@@ -104,7 +106,6 @@ class TESTGSMO(unittest.TestCase):
         h = np.zeros((2 * A.shape[0]))
         cond_idx = 0
         for i in range(A.shape[0]):
-            lb, ub = (0, 1)
             G[cond_idx, i] = 1
             h[cond_idx] = ub
             G[cond_idx + 1, i] = -1
@@ -113,7 +114,7 @@ class TESTGSMO(unittest.TestCase):
 
         x = cp.Variable(A.shape[0])
         b = -b
-        prob = cp.Problem(cp.Minimize((1 / 2) * cp.quad_form(x, A) - b.T @ x),
+        prob = cp.Problem(cp.Minimize( cp.quad_form(x, A) - b.T @ x),
                           [G @ x <= h, C @ x == d])
         prob.solve()
         print("\n#### CVXPY ####")
@@ -137,14 +138,15 @@ class TESTGSMO(unittest.TestCase):
         # Arrange
         A = np.array([[1, 0], [0, 1]], dtype=float)
         b = np.array([1, -1], dtype=float).reshape((2,))
-        gsmo_solver = GSMO(A=A, b=b, bounds=(0, 1), step_size=1)
+        lb = -1
+        ub = 1
+        gsmo_solver = GSMO(A=A, b=b, bounds=(lb, ub), step_size=1)
 
         x = cp.Variable(A.shape[0])
         G = np.zeros((2 * A.shape[0], A.shape[0]))
         h = np.zeros((2 * A.shape[0]))
         cond_idx = 0
         for i in range(A.shape[0]):
-            lb, ub = (0, 1)
             G[cond_idx, i] = 1
             h[cond_idx] = ub
             G[cond_idx + 1, i] = -1
@@ -168,16 +170,17 @@ class TESTGSMO(unittest.TestCase):
         # Arrange
         A = np.array([[1, 0], [0, 1]], dtype=float)
         b = np.array([1, -1], dtype=float).reshape((2,))
-        C = np.array([[1, 1]],dtype=float)
-        d = np.array([-0.25])
-        gsmo_solver = GSMO(A=A, b=b, C=C, d=d, bounds=(-0.25, 1), step_size=1)
+        C = np.array([[1, 0]],dtype=float)
+        d = np.array([0.5])
+        lb = -1
+        ub = 1
+        gsmo_solver = GSMO(A=A, b=b, C=C, d=d, bounds=(lb, ub), step_size=1)
 
         x = cp.Variable(A.shape[0])
         G = np.zeros((2 * A.shape[0], A.shape[0]))
         h = np.zeros((2 * A.shape[0]))
         cond_idx = 0
         for i in range(A.shape[0]):
-            lb, ub = (-0.25, 1)
             G[cond_idx, i] = 1
             h[cond_idx] = ub
             G[cond_idx + 1, i] = -1

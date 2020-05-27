@@ -74,20 +74,17 @@ class GSMO:
                     dx_best_S_best = dx_S_best
                 S.remove(j)
 
-            if j_best == -1:
-                print("no step in solution space is better")
-                print(f'after iterations: {t + 1}')
-                return self.x
-
-            S.append(j_best)
-            self.x[S] += self.step_size * dx_best_S_best
-            self.gradient += self.step_size * 2 * (self.A + self.A.T + np.diag(self.b))[:, S].dot(dx_best_S_best)
-
             if dF_best < self.epsilon:
                 print("Delta F < EPSILON")
                 print(f'after iterations: {t + 1}')
                 print(f'with last delta gradient: {dF_best}')
                 return self.x
+
+            S.append(j_best)
+            S = sorted(S)
+            self.x[S] += self.step_size * dx_best_S_best
+            self.gradient += self.step_size * 2 * (self.A + self.A.T + np.diag(self.b))[:, S].dot(dx_best_S_best)
+
 
         print("Max Iter reached")
         return self.x
@@ -161,6 +158,8 @@ class GSMO:
             k = S[0]
             c_k = self.C[:, k][0]
             c_l = self.C[:, l][0]
+            alpha_l = 0
+            alpha_k = 0
             if (not c_k == 0) and (not c_l == 0):
                 w, W = (self.r, self.R) if c_k * c_l > 0 else (self.R, self.r)
                 alpha_min = max(self.r - self.x[l], ((self.x[k] - W) * c_k) / c_l)
@@ -171,11 +170,22 @@ class GSMO:
                 alpha_k = - (alpha_l * c_l) / c_k
                 return np.array([alpha_k, alpha_l]).reshape((2,))
             elif c_k == 0 and not c_l == 0:
-                pass
+                # alpha_l = 0 and alpha_k from special_case
+                alpha_min = self.r - self.x[k]
+                alpha_max = self.R - self.x[k]
+                beta = self.A[k, k]
+                gamma = self.gradient[k]
+                alpha_k = self.solve_special_case(alpha_min, alpha_max, beta, gamma, k)
+                return np.array([alpha_k, alpha_l], dtype=float)
             elif c_l == 0 and not c_k == 0:
-                pass
-            else:
-                pass
+                # alpha_k = 0 and alpha_l from special_case
+                alpha_min = self.r - self.x[l]
+                alpha_max = self.R - self.x[l]
+                beta = self.A[l, l]
+                gamma = self.gradient[l]
+                alpha_l = self.solve_special_case(alpha_min, alpha_max, beta, gamma, k)
+                return np.array([alpha_k, alpha_l], dtype=float)
+
         u_k = null_space(self.C[:, S])
         alpha_k = self.__find_optimal_solution(S, np.linalg.matrix_rank(self.C) - np.linalg.matrix_rank(
             self.C[:, S]) + 1)
