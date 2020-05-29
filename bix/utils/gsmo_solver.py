@@ -6,7 +6,7 @@ from scipy.optimize import lsq_linear
 
 class GSMO:
     def __init__(self, A, b, C=None, d=0, bounds=(None, None), optimization_type='minimize', max_iter=10000,
-                 epsilon=0.0001,
+                 epsilon=0.0000001,
                  step_size=1):
         # optimize F: x'Ax + b'x  s.t.  Cx=d, x elements [r,R]^n
         self.A = A
@@ -83,8 +83,14 @@ class GSMO:
             S.append(j_best)
             S = sorted(S)
             self.x[S] += self.step_size * dx_best_S_best
-            self.gradient += self.step_size * 2 * (self.A + self.A.T + np.diag(self.b))[:, S].dot(dx_best_S_best)
 
+            grad_test = (self.A + self.A.transpose()).dot(self.x) + self.b
+            temp = (self.A + self.A.T + np.diag(self.b))
+            temp2 = (self.A + self.A.T + np.diag(self.b))[:, S]
+            temp3 = (self.A + self.A.T + np.diag(self.b))[:, S].dot(dx_best_S_best)
+            # self.gradient += self.step_size * 2 * ((self.A + self.A.T + np.diag(self.b))[:, S] @ (dx_best_S_best))
+            # self.gradient += self.step_size * 2 * ((self.A + self.A.T)[:, S] @ (dx_best_S_best) + self.b[S])
+            self.gradient = grad_test
 
         print("Max Iter reached")
         return self.x

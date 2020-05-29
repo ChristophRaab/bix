@@ -114,7 +114,7 @@ class TESTGSMO(unittest.TestCase):
 
         x = cp.Variable(A.shape[0])
         b = -b
-        prob = cp.Problem(cp.Minimize( cp.quad_form(x, A) - b.T @ x),
+        prob = cp.Problem(cp.Minimize(cp.quad_form(x, A) - b.T @ x),
                           [G @ x <= h, C @ x == d])
         prob.solve()
         print("\n#### CVXPY ####")
@@ -170,11 +170,11 @@ class TESTGSMO(unittest.TestCase):
         # Arrange
         A = np.array([[1, 0], [0, 1]], dtype=float)
         b = np.array([1, -1], dtype=float).reshape((2,))
-        C = np.array([[1, 0]],dtype=float)
-        d = np.array([0.5])
-        lb = -1
-        ub = 1
-        gsmo_solver = GSMO(A=A, b=b, C=C, d=d, bounds=(lb, ub), step_size=1)
+        C = np.array([[1, 1]], dtype=float)
+        d = np.array([7])
+        lb = -10
+        ub = 10
+        gsmo_solver = GSMO(A=A, b=b, C=C, d=d, bounds=(lb, ub), step_size=0.01)
 
         x = cp.Variable(A.shape[0])
         G = np.zeros((2 * A.shape[0], A.shape[0]))
