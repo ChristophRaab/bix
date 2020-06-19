@@ -80,10 +80,18 @@ class TESTGSMO(unittest.TestCase):
         print(data)
         A = np.zeros((data.shape[0], data.shape[0]), dtype=float)
         points = data[['X', 'Y']]
+        DataScaled = points.to_numpy()
+        #print(f'Huhu: {DataScaled.mean(axis=0)}')
+        #print(f'Huhu: {DataScaled.std(axis=0,ddof=1)}')
+        #DataScaled = sklearn.preprocessing.scale(DataScaled)  # this is surprisingly wrong
+        # DataScaled = stats.zscore(DataScaled) # this also not
+        DataScaled = (DataScaled - DataScaled.mean(axis=0))
+        DataScaled /= np.std(DataScaled, axis=0,ddof=1)
+        #print(f'Huhu: {DataScaled}')
         y = data['Label']
         for i in range(A.shape[0]):
             for j in range(A.shape[0]):
-                A[i, j] = y.iloc[i] * y.iloc[j] * points.iloc[i].dot(points.iloc[j])
+               A[i, j] = y.iloc[i] * y.iloc[j] * DataScaled[i,:].dot(DataScaled[j,:])
 
         A = (0.5) * A
         b = -np.ones((A.shape[0],), dtype=float)
@@ -92,16 +100,18 @@ class TESTGSMO(unittest.TestCase):
         d = np.zeros((1,), dtype=float)
         lb = 0
         ub = 1
-        gsmo_solver = GSMO(A, b, C_t, d, bounds=(lb, ub), step_size=0.001)
+        gsmo_solver = GSMO(A, b, C_t, d, bounds=(lb, ub), step_size=0.1)
 
         clf = SVC(C=1, kernel='linear')
-        clf.fit(points, y)
+        clf.fit(DataScaled, y)
 
         # Act
         print("#### SMO  ####")
         gsmo_solver.solve()
-        print(gsmo_solver.x)
-
+        print(f'x:{gsmo_solver.x}')
+        Qsmo = gsmo_solver.x.transpose().dot(A.dot(gsmo_solver.x))+b.transpose().dot(gsmo_solver.x)
+        print(f'Q-smo:{Qsmo}')
+        
         G = np.zeros((2 * A.shape[0], A.shape[0]))
         h = np.zeros((2 * A.shape[0]))
         cond_idx = 0
@@ -119,6 +129,9 @@ class TESTGSMO(unittest.TestCase):
         prob.solve()
         print("\n#### CVXPY ####")
         print(x.value)
+        Qcvx = x.value.transpose().dot(A.dot(x.value)) + b.transpose().dot(x.value)
+        print(f'Q-cvx:{Qcvx}')
+
 
         print("\n#### SVC ####")
         print(clf.dual_coef_)
@@ -128,10 +141,10 @@ class TESTGSMO(unittest.TestCase):
         plt.scatter(points['X'].iloc[clf.support_], points['Y'].iloc[clf.support_], c='r')
         plt.show()
 
-        # Assert
+        # Assert - there is not equality constraint for SVM
         # Cx = d
-        result = C.dot(gsmo_solver.x)
-        np.testing.assert_almost_equal(d, result)
+        # result = C.dot(gsmo_solver.x)
+        # np.testing.assert_almost_equal(d, result)
         # np.testing.assert_almost_equal(gsmo_solver.x, res.x)
 
     def test_small_qp_without_constraints(self):
@@ -140,7 +153,7 @@ class TESTGSMO(unittest.TestCase):
         b = np.array([1, -1], dtype=float).reshape((2,))
         lb = -1
         ub = 1
-        gsmo_solver = GSMO(A=A, b=b, bounds=(lb, ub), step_size=1)
+        gsmo_solver = GSMO(A=2*A, b=b, bounds=(lb, ub), step_size=0.1)
 
         x = cp.Variable(A.shape[0])
         G = np.zeros((2 * A.shape[0], A.shape[0]))
@@ -155,11 +168,11 @@ class TESTGSMO(unittest.TestCase):
         prob = cp.Problem(cp.Minimize(cp.quad_form(x, A) + b.T @ x),
                           [G @ x <= h])
         prob.solve()
-        print("\n#### CVXPY ####")
+        print("\n#### CVXPY #### (QP-no-c)")
         print(x.value)
 
         # Act
-        print("#### SMO  ####")
+        print("#### SMO  ####  (QP-no-c)")
         gsmo_solver.solve()
         print(gsmo_solver.x)
 
