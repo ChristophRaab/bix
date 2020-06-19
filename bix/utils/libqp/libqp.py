@@ -40,8 +40,9 @@ class LibQP:
             raise ValueError("tolKKT must be a float!")
 
         # c code needs a column wise matrix
-        H = H.transpose()
-        self.H = np.ascontiguousarray(H, dtype=H.dtype)
+        self.H = H.transpose()
+        # necessary for data transfer
+        self.H = np.ascontiguousarray(self.H, dtype=H.dtype)
         self.diagH = np.array(np.diag(H))
         self.f = f
         self.a = a
