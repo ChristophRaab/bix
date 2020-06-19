@@ -239,8 +239,8 @@ class GSMO:
         for i in range(D2):
              lb  = -self.r # to get the <= as > we have to change both signs
              ub = self.R
-             h[i]           = lb
-             h[D2 + i] = ub
+             h[i] = lb + self.x[S[i]]
+             h[D2 + i] = ub - self.x[S[i]]
         x = cp.Variable(D)
         prob = cp.Problem(cp.Minimize(cp.quad_form(x, P) + q.T @ x),  [G @ x <= h])
                                        
