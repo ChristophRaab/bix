@@ -162,7 +162,7 @@ class GSMO:
             alpha_max = self.R - self.x[k]
             beta = self.A[k, k]
             gamma = (self.gradient + self.b)[k]
-            dx_s[i] = (self.solve_special_case(alpha_min, alpha_max, beta, gamma, k))                                                                             
+            dx_s[0] = (self.solve_special_case(alpha_min, alpha_max, beta, gamma, k))
             return dx_s.reshape((dx_s.shape[0],))
 
         if self.K == 2:

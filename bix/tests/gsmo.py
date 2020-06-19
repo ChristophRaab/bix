@@ -153,7 +153,7 @@ class TESTGSMO(unittest.TestCase):
         b = np.array([1, -1], dtype=float).reshape((2,))
         lb = -1
         ub = 1
-        gsmo_solver = GSMO(A=2*A, b=b, bounds=(lb, ub), step_size=0.1)
+        gsmo_solver = GSMO(A=2*A, b=b, bounds=(lb, ub), step_size=1)
 
         x = cp.Variable(A.shape[0])
         G = np.zeros((2 * A.shape[0], A.shape[0]))
@@ -172,8 +172,8 @@ class TESTGSMO(unittest.TestCase):
         print(x.value)
 
         # Act
-        print("#### SMO  ####  (QP-no-c)")
         gsmo_solver.solve()
+        print("#### SMO  ####  (QP-no-c)")
         print(gsmo_solver.x)
 
         # Assert
@@ -187,7 +187,7 @@ class TESTGSMO(unittest.TestCase):
         d = np.array([7])
         lb = -10
         ub = 10
-        gsmo_solver = GSMO(A=A, b=b, C=C, d=d, bounds=(lb, ub), step_size=0.01)
+        gsmo_solver = GSMO(A=A, b=b, C=C, d=d, bounds=(lb, ub), step_size=1)
 
         x = cp.Variable(A.shape[0])
         G = np.zeros((2 * A.shape[0], A.shape[0]))
