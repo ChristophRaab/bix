@@ -8,6 +8,67 @@ class LibqpState(Structure):
     _fields_ = [("nIter", c_uint32), ("QP", c_double), ("QD", c_double), ("exitFlag", c_int8)]
 
 
+"""
+libqp.h: Library for Quadratic Programming optimization.
+ The library provides a c binding to following solver:
+ Solver for QP task with box constraints and a single linear equality constraint. 
+    libqp_gsmo.c: implementation of the Generalized SMO algorithm.
+ 
+    DESCRIPTION
+    The library provides function which solves the following instance of
+    a convex Quadratic Programming task:
+     
+    min QP(x) := 0.5*x'*H*x + f'*x  
+    x                                      
+     
+    s.t.    a'*x = b 
+            LB[i] <= x[i] <= UB[i]   for all i=1..n
+     
+    A precision of the found solution is controlled by the input argument
+    TolKKT which defines tightness of the relaxed Karush-Kuhn-Tucker 
+    stopping conditions.
+     
+    INPUT ARGUMENTS
+    get_col   function which returns pointer to the i-th column of H.
+    diag_H [double n x 1] vector containing values on the diagonal of H.
+    f [double n x 1] vector.
+    a [double n x 1] Vector which must not contain zero entries.
+    b [double 1 x 1] Scalar.
+    LB [double n x 1] Lower bound; -inf is allowed.
+    UB [double n x 1] Upper bound; inf is allowed.
+    x [double n x 1] solution vector; must be feasible.
+    n [uint32_t 1 x 1] dimension of H.
+    MaxIter [uint32_t 1 x 1] max number of iterations.
+    TolKKT [double 1 x 1] Tightness of KKT stopping conditions.
+    print_state  print function; if == NULL it is not called.
+     
+    RETURN VALUE
+    structure [libqp_state_T]
+    .QP [1x1] Primal objective value.
+    .exitflag [1 x 1] Indicates which stopping condition was used:
+          -1  ... not enough memory
+           0  ... Maximal number of iterations reached: nIter >= MaxIter.
+           4  ... Relaxed KKT conditions satisfied. 
+    .nIter [1x1] Number of iterations.
+     
+    REFERENCE
+    S.S. Keerthi, E.G. Gilbert. Convergence of a generalized SMO algorithm 
+    for SVM classier design. Technical Report CD-00-01, Control Division, 
+    Dept. of Mechanical and Production Engineering, National University 
+    of Singapore, 2000. 
+    http://citeseer.ist.psu.edu/keerthi00convergence.html  
+     
+     
+    Copyright (C) 2006-2008 Vojtech Franc, xfrancv@cmp.felk.cvut.cz
+    Center for Machine Perception, CTU FEL Prague
+     
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public 
+    License as published by the Free Software Foundation; 
+    Version 3, 29 June 2007
+"""
+
+
 class LibQP:
 
     def __init__(self, H, f, a, b, LB, UB, x, maxIter, tolKKT, printfunc=None):
