@@ -29,7 +29,7 @@ libqp.h: Library for Quadratic Programming optimization.
     stopping conditions.
      
     INPUT ARGUMENTS
-    get_col   function which returns pointer to the i-th column of H.
+    H [double n x n] matrix
     diag_H [double n x 1] vector containing values on the diagonal of H.
     f [double n x 1] vector.
     a [double n x 1] Vector which must not contain zero entries.
