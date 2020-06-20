@@ -80,7 +80,7 @@ class LibQP:
             raise ValueError("f must be a n x 1 numpy ndarray!")
 
         if (not isinstance(a, np.ndarray)) or (not len(a) == H.shape[0]) or (not np.count_nonzero(a) == a.shape[0]):
-            raise ValueError("a must be a n x 1 numpy ndarray!")
+            raise ValueError("a must be a n x 1 numpy ndarray which must not contain zero entries!")
 
         if not isinstance(b, numbers.Number):
             raise ValueError("b must be a scalar!")
