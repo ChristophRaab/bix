@@ -73,25 +73,25 @@ class LibQP:
 
     def __init__(self, H, f, a, b, LB, UB, x, maxIter, tolKKT, printfunc=None):
 
-        if not isinstance(H, np.ndarray) or not H.shape[0] == H.shape[1]:
+        if (not isinstance(H, np.ndarray)) or (not H.shape[0] == H.shape[1]):
             raise ValueError("H must be a quadratic numpy ndarray!")
 
-        if not isinstance(f, np.ndarray) or not len(f) == H.shape[0]:
+        if (not isinstance(f, np.ndarray)) or (not len(f) == H.shape[0]):
             raise ValueError("f must be a n x 1 numpy ndarray!")
 
-        if not isinstance(a, np.ndarray) or not len(a) == H.shape[0]:
+        if (not isinstance(a, np.ndarray)) or (not len(a) == H.shape[0]) or (not np.count_nonzero(a) == a.shape[0]):
             raise ValueError("a must be a n x 1 numpy ndarray!")
 
         if not isinstance(b, numbers.Number):
             raise ValueError("b must be a scalar!")
 
-        if not isinstance(LB, np.ndarray) or not len(LB) == H.shape[0]:
+        if (not isinstance(LB, np.ndarray)) or (not len(LB) == H.shape[0]):
             raise ValueError("LB must be a n x 1 numpy ndarray!")
 
-        if not isinstance(UB, np.ndarray) or not len(UB) == H.shape[0]:
+        if (not isinstance(UB, np.ndarray)) or (not len(UB) == H.shape[0]):
             raise ValueError("UB must be a n x 1 numpy ndarray!")
 
-        if not isinstance(x, np.ndarray) or not len(x) == H.shape[0]:
+        if (not isinstance(x, np.ndarray)) or (not len(x) == H.shape[0]):
             raise ValueError("x must be a n x 1 numpy ndarray!")
 
         if not isinstance(maxIter, int):
@@ -133,7 +133,7 @@ class LibQP:
 
         self.solveSMO = self.__wrap_function("libqp_gsmo_solver", LibqpState,
                                              [np.ctypeslib.ndpointer(dtype=np.uintp, ndim=1, flags="C"),
-                                              POINTER(c_double), POINTER(c_double), \
+                                              POINTER(c_double), POINTER(c_double),
                                               POINTER(c_double), c_double, POINTER(c_double), POINTER(c_double),
                                               POINTER(c_double), c_uint32, c_uint32, c_double,
                                               self.__print_state_proto])
