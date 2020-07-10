@@ -6,8 +6,8 @@ from scipy.optimize import lsq_linear
 
 class GSMO:
     def __init__(self, A, b, C=None, d=0, bounds=(None, None), optimization_type='minimize', max_iter=1000,
-                 epsilon=1e-8, #1e-14
-                 step_size=1): # in the original way (SGD) it does not make any sense to have step size 1
+                 epsilon=1e-8,  # 1e-14
+                 step_size=1):  # in the original way (SGD) it does not make any sense to have step size 1
         # optimize F: x'Ax + b'x  s.t.  Cx=d, x elements [r,R]^n
         self.A = A
         self.b = b
@@ -28,9 +28,11 @@ class GSMO:
             # first guess such that Cx = d and x elements [r,R]^n
             if np.count_nonzero(C) > 0:
                 result = lsq_linear(C, d, bounds=(self.r, self.R))
-                self.x = result.x   
+                self.x = result.x
             else:
-                self.x = np.random.default_rng().uniform(self.r,self.R,self.n)
+                self.x = np.random.default_rng().uniform(self.r, self.R, self.n)
+
+            # if x is uniformly random between r-R -> C * x = D is not guaranteed
             test_res = C.dot(self.x)
             if not np.allclose(d, test_res):
                 raise ValueError(
@@ -39,7 +41,9 @@ class GSMO:
 
         else:
             self.C = np.zeros((1, self.n), dtype=float)
-            self.x = np.array([self.r] * self.n, dtype=float)
+            # self.x = np.array([self.r] * self.n, dtype=float)
+            self.x = np.random.default_rng().uniform(self.r, self.R, self.n)
+
         self.d = d
 
         # minimize or maximize
@@ -48,7 +52,8 @@ class GSMO:
         # size of working set
         self.K = np.linalg.matrix_rank(self.C) + 1
         # initial gradient
-        self.gradient = (self.A + self.A.transpose()).dot(self.x) + self.b # (b is left out later on in the update since x is updated only)
+        self.gradient = (self.A + self.A.transpose()).dot(
+            self.x) + self.b  # (b is left out later on in the update since x is updated only)
 
         # options
         self.max_iter = max_iter
@@ -60,7 +65,7 @@ class GSMO:
             S = self.__init_working_set()
             dF_best = 0
             j_best = -1
-            j_all = np.linspace(0,self.n-1,self.n).astype(int)
+            j_all = np.linspace(0, self.n - 1, self.n).astype(int)
             j_without_S = np.setdiff1d(j_all, S)
             dx_best_S_best = 0
             for j in j_without_S:
@@ -80,7 +85,7 @@ class GSMO:
 
             if dF_best < self.epsilon:
                 print("Delta F < EPSILON")
-                print(f'after iterations: {t + 1}')
+                print(f'after {t + 1} iterations')
                 print(f'with last delta gradient: {dF_best}')
                 return self.x
 
@@ -88,12 +93,9 @@ class GSMO:
             S = sorted(S)
             self.x[S] += self.step_size * dx_best_S_best
 
-            #grad_test = (self.A + self.A.transpose()).dot(self.x) + self.b
-            #temp = (self.A + self.A.T + np.diag(self.b))
-            #temp2 = (self.A + self.A.T + np.diag(self.b))[:, S]
-            #temp3 = (self.A + self.A.T + np.diag(self.b))[:, S].dot(dx_best_S_best)                      
+            grad_test = (self.A + self.A.transpose()).dot(self.x) + self.b
             # self.gradient += self.step_size * 2 * ((self.A + self.A.T + np.diag(self.b))[:, S] @ (dx_best_S_best))
-            self.gradient += self.step_size * ( self.A[:, S].dot(dx_best_S_best) + self.A[:, S].dot(dx_best_S_best))
+            self.gradient += self.step_size * (self.A[:, S].dot(dx_best_S_best) + self.A[:, S].dot(dx_best_S_best))
 
         print("Max Iter reached")
         return self.x
@@ -121,6 +123,8 @@ class GSMO:
                 p = p_upper_bound
 
             sorted_v = np.sort(gradient_displaced, order='val')
+            # reverse ordering
+            sorted_v = sorted_v[::-1]
             for i in range(self.K - p - 1):
                 working_set.append(sorted_v[i][0])
 
@@ -137,8 +141,8 @@ class GSMO:
         return working_set
 
     def __find_optimal_gradient_displacement(self, x_i, df_i):
-        choice_r = (self.r - x_i) * df_i # at Eq 5
-        choice_R = (self.R - x_i) * df_i # at Eq 5
+        choice_r = (self.r - x_i) * df_i  # at Eq 5
+        choice_R = (self.R - x_i) * df_i  # at Eq 5
         if self.optimization_type == 'maximize':
             # QP is maximized we pick n_i* such that n_i* x df_i >= 0
             # n_i = (w - x_i)
@@ -156,7 +160,7 @@ class GSMO:
 
     def __solve_small_QP(self, S):
         if self.K == 1:
-            dx_s = np.zeros((len(S), 1))                           
+            dx_s = np.zeros((len(S), 1))
             k = S[0]
             alpha_min = self.r - self.x[k]
             alpha_max = self.R - self.x[k]
@@ -176,10 +180,12 @@ class GSMO:
                 w, W = (self.r, self.R) if c_k * c_l > 0 else (self.R, self.r)
                 alpha_min = max(self.r - self.x[l], ((self.x[k] - W) * c_k) / c_l)
                 alpha_max = min(self.R - self.x[l], ((self.x[k] - w) * c_k) / c_l)
-                beta = self.A[l,l]
-                gamma = self.gradient[l]
+                beta = (((c_l * c_l) / (c_k * c_k)) * self.A[k, k]) + self.A[l, l] - (
+                            (c_l / c_k) * (self.A[k, l] + self.A[l, k]))
+                gamma = ((-c_l / c_k) * self.gradient[k]) + self.gradient[l]
                 alpha_l = self.solve_special_case(alpha_min, alpha_max, beta, gamma, l)
                 alpha_k = - (alpha_l * c_l) / c_k
+
                 return np.array([alpha_k, alpha_l]).reshape((2,))
             elif c_k == 0 and not c_l == 0:
                 # alpha_l = 0 and alpha_k from special_case
@@ -202,23 +208,23 @@ class GSMO:
         dx_s = self.__find_optimal_solution(S, u_k)
         if dx_s is None:
             raise RuntimeError("Small QP was not solvable")
-            
+
         return dx_s.reshape((dx_s.shape[0],))
 
     def solve_special_case(self, alpha_min, alpha_max, beta, gamma, k):
         # alpha = -(gamma)/2*beta if -(gamma)/2*beta in bounds amin,amax and beta < 0 (maximization) > 0 (minimization)
-        if beta==0:
+        if beta == 0:
             print(f'beta is 0 - return {alpha_min}')
             return alpha_min
-            
-        alpha = - gamma / (2 * beta) # analytical solution (ok)
+
+        alpha = - gamma / (2 * beta)  # analytical solution (ok)
         if alpha_min <= alpha <= alpha_max and ((self.optimization_type == 'maximize' and beta < 0) or (
                 self.optimization_type == 'minimize' and beta > 0)):
             return alpha
         else:
             # calculate the cost by setting dummy (valid) values for alpha (makes sense) (ok)
-            cost_amin = beta * alpha_min * alpha_min + gamma * alpha_min
-            cost_amax = beta * alpha_max * alpha_max + gamma * alpha_max
+            cost_amin = (beta * alpha_min * alpha_min) + gamma * alpha_min
+            cost_amax = (beta * alpha_max * alpha_max) + gamma * alpha_max
             if self.optimization_type == 'maximize' and cost_amax >= cost_amin:
                 return alpha_max
             elif self.optimization_type == 'maximize' and cost_amin >= cost_amax:
@@ -229,24 +235,24 @@ class GSMO:
                 return alpha_max
 
     def __find_optimal_solution(self, S, Us):
-        #q = ((self.A.dot(self.x) + self.A.T.dot(self.x) +  self.b)[S]).transpose().dot(Us)
+        # q = ((self.A.dot(self.x) + self.A.T.dot(self.x) +  self.b)[S]).transpose().dot(Us)
         q = (self.gradient[S]).transpose().dot(Us)  # no + self.b here - does not work
         D = len(q)
-        P = Us.transpose().dot(self.A[np.ix_(S,S)]).dot(Us);
-        G = np.vstack((-Us,Us))
+        P = Us.transpose().dot(self.A[np.ix_(S, S)]).dot(Us)
+        G = np.vstack((-Us, Us))
         D2 = len(S)
         h = np.zeros((2 * D2))
         for i in range(D2):
-             lb  = -self.r # to get the <= as > we have to change both signs
-             ub = self.R
-             h[i] = lb + self.x[S[i]]
-             h[D2 + i] = ub - self.x[S[i]]
+            lb = -self.r  # to get the <= as > we have to change both signs
+            ub = self.R
+            h[i] = lb + self.x[S[i]]
+            h[D2 + i] = ub - self.x[S[i]]
         x = cp.Variable(D)
-        prob = cp.Problem(cp.Minimize(cp.quad_form(x, P) + q.T @ x),  [G @ x <= h])
-                                       
+        prob = cp.Problem(cp.Minimize(cp.quad_form(x, P) + q.T @ x), [G @ x <= h])
+
         prob.solve()
         xRes = Us.dot(x.value)
-        return xRes #x.value #x.value
+        return xRes  # x.value #x.value
 
     def __get_bounds(self, x_i, S, i):
         alpha_min = 0
