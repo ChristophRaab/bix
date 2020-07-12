@@ -101,7 +101,7 @@ class TESTGSMO(unittest.TestCase):
         d = np.zeros((1,), dtype=float)
         lb = 0
         ub = 1
-        gsmo_solver = GSMO(A, b, C_t, d, bounds=(lb, ub), step_size=1)
+        gsmo_solver = GSMO(A, b, C_t, d, bounds=(lb, ub), step_size=1, epsilon=1e-14)
 
         clf = SVC(C=1, kernel='linear')
         clf.fit(DataScaled, y)
