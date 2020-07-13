@@ -166,7 +166,7 @@ class GSMO:
             alpha_max = self.R - self.x[k]
             beta = self.A[k, k]
             gamma = (self.gradient + self.b)[k]
-            dx_s[0] = (self.solve_special_case(alpha_min, alpha_max, beta, gamma, k))
+            dx_s[0] = (self.__solve_bounded_second_degree(alpha_min, alpha_max, beta, gamma))
             return dx_s.reshape((dx_s.shape[0],))
 
         if self.K == 2:
@@ -181,37 +181,49 @@ class GSMO:
                 alpha_min = max(self.r - self.x[l], ((self.x[k] - W) * c_k) / c_l)
                 alpha_max = min(self.R - self.x[l], ((self.x[k] - w) * c_k) / c_l)
                 beta = (((c_l * c_l) / (c_k * c_k)) * self.A[k, k]) + self.A[l, l] - (
-                            (c_l / c_k) * (self.A[k, l] + self.A[l, k]))
+                        (c_l / c_k) * (self.A[k, l] + self.A[l, k]))
                 gamma = ((-c_l / c_k) * self.gradient[k]) + self.gradient[l]
-                alpha_l = self.solve_special_case(alpha_min, alpha_max, beta, gamma, l)
+                alpha_l = self.__solve_bounded_second_degree(alpha_min, alpha_max, beta, gamma)
                 alpha_k = - (alpha_l * c_l) / c_k
 
-                return np.array([alpha_k, alpha_l]).reshape((2,))
             elif c_k == 0 and not c_l == 0:
                 # alpha_l = 0 and alpha_k from special_case
                 alpha_min = self.r - self.x[k]
                 alpha_max = self.R - self.x[k]
                 beta = self.A[k, k]
                 gamma = self.gradient[k]
-                alpha_k = self.solve_special_case(alpha_min, alpha_max, beta, gamma, k)
-                return np.array([alpha_k, alpha_l], dtype=float)
+                alpha_k = self.__solve_bounded_second_degree(alpha_min, alpha_max, beta, gamma)
+
             elif c_l == 0 and not c_k == 0:
                 # alpha_k = 0 and alpha_l from special_case
                 alpha_min = self.r - self.x[l]
                 alpha_max = self.R - self.x[l]
                 beta = self.A[l, l]
                 gamma = self.gradient[l]
-                alpha_l = self.solve_special_case(alpha_min, alpha_max, beta, gamma, k)
-                return np.array([alpha_k, alpha_l], dtype=float)
+                alpha_l = self.__solve_bounded_second_degree(alpha_min, alpha_max, beta, gamma)
 
+            else:  # c_l == 0 and c_k == 0
+                betas = np.array([[self.A[k, k], self.A[k, l]], [self.A[l, k], self.A[l, l]]])
+                gamma_1 = self.gradient[k]
+                gamma_2 = self.gradient[l]
+                alpha_min_1 = self.r - self.x[k]
+                alpha_max_1 = self.R - self.x[k]
+                alpha_min_2 = self.r - self.x[l]
+                alpha_max_2 = self.R - self.x[l]
+                alpha_k, alpha_l = self.__solve_bounded_conic(betas, gamma_1, gamma_2, alpha_min_1, alpha_max_1,
+                                                              alpha_min_2, alpha_max_2)
+
+            return np.array([alpha_k, alpha_l], dtype=float).reshape((2,))
+
+        # general case K > 2
         u_k = null_space(self.C[:, S])
-        dx_s = self.__find_optimal_solution(S, u_k)
+        dx_s = self.__solve_general_case(S, u_k)
         if dx_s is None:
             raise RuntimeError("Small QP was not solvable")
 
         return dx_s.reshape((dx_s.shape[0],))
 
-    def solve_special_case(self, alpha_min, alpha_max, beta, gamma, k):
+    def __solve_bounded_second_degree(self, alpha_min, alpha_max, beta, gamma):
         # alpha = -(gamma)/2*beta if -(gamma)/2*beta in bounds amin,amax and beta < 0 (maximization) > 0 (minimization)
         if beta == 0:
             print(f'beta is 0 - return {alpha_min}')
@@ -234,7 +246,57 @@ class GSMO:
             else:
                 return alpha_max
 
-    def __find_optimal_solution(self, S, Us):
+    def __solve_bounded_conic(self, betas, gamma_1, gamma_2, alpha_min_1, alpha_max_1, alpha_min_2,
+                              alpha_max_2):
+        # solutions at the boundaries alpha_min_1, alpha_max_1, alpha_min_2, alpha_max_2
+        solutions = []
+        alpha_1 = alpha_min_1
+        alpha_2 = self.__solve_bounded_second_degree(alpha_min_2, alpha_max_2, betas[1, 1],
+                                                     gamma_2 + alpha_1 * (betas[0, 1] + betas[1, 0]))
+        solutions.append((alpha_1, alpha_2))
+
+        alpha_1 = alpha_max_1
+        alpha_2 = self.__solve_bounded_second_degree(alpha_min_2, alpha_max_2, betas[1, 1],
+                                                     gamma_2 + alpha_1 * (betas[0, 1] + betas[1, 0]))
+        solutions.append((alpha_1, alpha_2))
+
+        alpha_2 = alpha_min_2
+        alpha_1 = self.__solve_bounded_second_degree(alpha_min_1, alpha_max_1, betas[0, 0],
+                                                     gamma_1 + alpha_2 * (betas[0, 1] + betas[1, 0]))
+        solutions.append((alpha_1, alpha_2))
+
+        alpha_2 = alpha_max_2
+        alpha_1 = self.__solve_bounded_second_degree(alpha_min_1, alpha_max_1, betas[0, 0],
+                                                     gamma_1 + alpha_2 * (betas[0, 1] + betas[1, 0]))
+        solutions.append((alpha_1, alpha_2))
+
+        # if (B_12 + B_21)^2 - 4 * B_11 * B_22 < 0 then check if optimum inside 2 * Betas * alphas = - Gammas
+        if (betas[0, 1] - betas[1, 0]) * (betas[0, 1] - betas[1, 0]) - 4 * betas[0, 0] * betas[1, 1] < 0:
+            gammas = np.array([gamma_1, gamma_2])
+            result = lsq_linear(2 * betas, gammas)
+            solutions.append((result.x[0], result.x[1]))
+
+        optimum = float('inf') if self.optimization_type == 'minimize' else float('-inf')
+        best_alphas = ()
+        for a_1, a_2 in solutions:
+            value = (betas[0, 0] * a_1 * a_1) \
+                    + (betas[1, 1] * a_2 * a_2) \
+                    + ((betas[0, 1] + betas[1, 0]) * a_1 * a_2) \
+                    + (gamma_1 * a_1) \
+                    + (gamma_2 * a_2)
+
+            if self.optimization_type == 'minimize':
+                if value < optimum:
+                    optimum = value
+                    best_alphas = (a_1, a_2)
+            else:
+                if value > optimum:
+                    optimum = value
+                    best_alphas = (a_1, a_2)
+
+        return best_alphas
+
+    def __solve_general_case(self, S, Us):
         # q = ((self.A.dot(self.x) + self.A.T.dot(self.x) +  self.b)[S]).transpose().dot(Us)
         q = (self.gradient[S]).transpose().dot(Us)  # no + self.b here - does not work
         D = len(q)
@@ -253,23 +315,3 @@ class GSMO:
         prob.solve()
         xRes = Us.dot(x.value)
         return xRes  # x.value #x.value
-
-    def __get_bounds(self, x_i, S, i):
-        alpha_min = 0
-        alpha_max = 0
-        if len(S) == 1:
-            alpha_min = self.r - x_i
-            alpha_max = self.R - x_i
-        elif len(S) == 2:
-            l = S[i]
-            k = S[0]
-            if i == 0:
-                k = S[1]
-            c_k = self.C[:, k][0]
-            c_l = self.C[:, l][0]
-            if (not c_k == 0) and (not c_l == 0):
-                w, W = (self.r, self.R) if c_k * c_l > 0 else (self.R, self.r)
-                alpha_min = max(self.r - self.x[l], ((self.x[k] - W) * c_k) / c_l)
-                alpha_max = min(self.R - self.x[l], ((self.x[k] - w) * c_k) / c_l)
-
-        return alpha_min, alpha_max

@@ -226,8 +226,8 @@ class TESTGSMO(unittest.TestCase):
         # Arrange
         A = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], dtype=float)
         b = np.array([1, -1, 2, -2], dtype=float).reshape((4,))
-        C = np.array([[1, 1, 0, 0], [0, 1, 1, 1]], dtype=float)  # [1, 0, 0, 1],
-        d = np.array([7, 4])  # 3.75,
+        C = np.array([[1, 1, 0, 0], [0, 1, 1, 1], [1, 0, 0, 0]], dtype=float)  # [1, 0, 0, 1],
+        d = np.array([7, 4, 3.75])  # 3.75,
         lb = -4
         ub = 4
         gsmo_solver = GSMO(A=A, b=b, C=C, d=d, bounds=(lb, ub), step_size=1)
