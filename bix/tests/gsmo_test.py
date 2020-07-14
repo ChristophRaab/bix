@@ -192,11 +192,11 @@ class TESTGSMO(unittest.TestCase):
         # Arrange
         A = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], dtype=float)
         b = np.array([1, -1, 1, -1], dtype=float).reshape((4,))
-        C = np.array([[1, -1, 0, 0]], dtype=float)
-        d = np.array([7])
-        lb = -100
+        C = np.array([[1, 1, 0, 1]], dtype=float)
+        d = np.array([30])
+        lb = 10
         ub = 100
-        gsmo_solver = GSMO(A=A, b=b, C=C, d=d, bounds=(lb, ub), step_size=1)
+        gsmo_solver = GSMO(A=A, b=b, C=C, d=d, bounds=(lb, ub), step_size=1, epsilon=1e-14)
 
         x = cp.Variable(A.shape[0])
         G = np.zeros((2 * A.shape[0], A.shape[0]))
@@ -226,11 +226,11 @@ class TESTGSMO(unittest.TestCase):
         # Arrange
         A = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], dtype=float)
         b = np.array([1, -1, 2, -2], dtype=float).reshape((4,))
-        C = np.array([[1, 1, 0, 0], [0, 1, 1, 1], [1, 0, 0, 0]], dtype=float)  # [1, 0, 0, 1],
-        d = np.array([7, 4, 3.75])  # 3.75,
+        C = np.array([[1, 1, 0, 0], [0, 1, 1, 1], [1, 0, 0, 0]], dtype=float)
+        d = np.array([26.5, 40,  26.5])
         lb = 0
-        ub = 4
-        gsmo_solver = GSMO(A=A, b=b, C=C, d=d, bounds=(lb, ub), step_size=1)
+        ub = 100
+        gsmo_solver = GSMO(A=A, b=b, C=C, d=d, bounds=(lb, ub), step_size=1, epsilon=1e-14)
 
         x = cp.Variable(A.shape[0])
         G = np.zeros((2 * A.shape[0], A.shape[0]))

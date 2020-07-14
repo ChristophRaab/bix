@@ -107,7 +107,7 @@ class GSMO:
         inactive_set = []
         gradient_displaced = np.empty((self.n,), dtype=[('idx', int), ('val', float)])
         for i in range(self.n):
-            grad_at_i = (self.gradient + self.b)[i]
+            grad_at_i = self.gradient[i]
             w_best = self.__find_optimal_gradient_displacement(self.x[i], grad_at_i)
             gradient_displaced[i] = (i, abs((w_best - self.x[i]) * grad_at_i))
 
