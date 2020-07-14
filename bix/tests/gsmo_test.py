@@ -112,11 +112,11 @@ class TESTGSMO(unittest.TestCase):
         print(f'x:{gsmo_solver.x}')
         Qsmo = gsmo_solver.x.transpose().dot(A.dot(gsmo_solver.x)) + b.transpose().dot(gsmo_solver.x)
         print(f'Q-smo:{Qsmo}')
-        w, b_gsmo = self.__calcWandB(gsmo_solver.x,DataScaled,y)
+        w, b_gsmo = self.__calcWandB(gsmo_solver.x, DataScaled, y)
         print(f'GSMO w = {w} and b = {b_gsmo}')
-        print(f'GSMO max margin {1/np.linalg.norm(w)}')
+        print(f'GSMO max margin {1 / np.linalg.norm(w)}')
         for i in range(DataScaled.shape[0]):
-            print(f'pred: {i}: {w.dot(DataScaled[i,:] - b_gsmo)}')
+            print(f'pred: {i}: {w.dot(DataScaled[i, :] - b_gsmo)}')
 
         G = np.zeros((2 * A.shape[0], A.shape[0]))
         h = np.zeros((2 * A.shape[0]))
@@ -141,7 +141,7 @@ class TESTGSMO(unittest.TestCase):
         print(f'CVX w = {w_cvx} and b = {b_cvx}')
         print(f'CVX max margin {1 / np.linalg.norm(w_cvx)}')
         for i in range(DataScaled.shape[0]):
-            print(f'pred: {i}: {w_cvx.dot(DataScaled[i,:] - b_cvx)}')
+            print(f'pred: {i}: {w_cvx.dot(DataScaled[i, :] - b_cvx)}')
         print("\n#### SVC ####")
         print(clf.dual_coef_)
         print(clf.support_)
@@ -190,9 +190,9 @@ class TESTGSMO(unittest.TestCase):
 
     def test_small_qp_with_constraints(self):
         # Arrange
-        A = np.array([[1, 0], [0, 1]], dtype=float)
-        b = np.array([1, -1], dtype=float).reshape((2,))
-        C = np.array([[1, 1]], dtype=float)
+        A = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], dtype=float)
+        b = np.array([1, -1, 1, -1], dtype=float).reshape((4,))
+        C = np.array([[1, -1, 0, 0]], dtype=float)
         d = np.array([7])
         lb = -100
         ub = 100
@@ -228,7 +228,7 @@ class TESTGSMO(unittest.TestCase):
         b = np.array([1, -1, 2, -2], dtype=float).reshape((4,))
         C = np.array([[1, 1, 0, 0], [0, 1, 1, 1], [1, 0, 0, 0]], dtype=float)  # [1, 0, 0, 1],
         d = np.array([7, 4, 3.75])  # 3.75,
-        lb = -4
+        lb = 0
         ub = 4
         gsmo_solver = GSMO(A=A, b=b, C=C, d=d, bounds=(lb, ub), step_size=1)
 

@@ -210,8 +210,10 @@ class GSMO:
                 alpha_max_1 = self.R - self.x[k]
                 alpha_min_2 = self.r - self.x[l]
                 alpha_max_2 = self.R - self.x[l]
-                alpha_k, alpha_l = self.__solve_bounded_conic(betas, gamma_1, gamma_2, alpha_min_1, alpha_max_1,
+                a_1, a_2 = self.__solve_bounded_conic(betas, gamma_1, gamma_2, alpha_min_1, alpha_max_1,
                                                               alpha_min_2, alpha_max_2)
+                alpha_k = a_1
+                alpha_l = a_2
 
             return np.array([alpha_k, alpha_l], dtype=float).reshape((2,))
 
