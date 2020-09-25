@@ -14,6 +14,6 @@ scipy==1.3.0
 tensorboard==1.14.0
 tensorflow==1.15.2
 tensorflow-estimator==1.14.0
-tensorflow-gpu==1.15.2
+tensorflow-gpu==1.15.4
 tf-estimator-nightly==1.14.0.dev2019060501
 -e git+https://github.com/twintproject/twint.git@cb28f2e1d53e0422dcf360c2a37cbb5defd5e0b7#egg=twint
