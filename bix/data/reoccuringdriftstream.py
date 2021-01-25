@@ -138,8 +138,9 @@ class ReoccuringDriftStream(Stream):
         self._input_stream = stream
         self._drift_stream = drift_stream
         self.n_targets = stream.n_targets
+        self._prepare_for_use()
 
-    def prepare_for_use(self):
+    def _prepare_for_use(self):
         self.random_state = check_random_state(self._original_random_state)
         self.sample_idx = 0
         self._input_stream.prepare_for_use()
